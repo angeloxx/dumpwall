@@ -131,10 +131,36 @@ class DHCPStatic(Container):
           return True          
       return False
 
+
+
+class NATs(Container):
+    def __init__(self):
+      super(NATs, self).__init__()
+      self.map = {
+        'natPolicyOrigSrc_':'src_orig','natPolicyOrigSvc_':'src_nat',
+        'natPolicyOrigDst_':'dst_orig','natPolicyTransDst_':'dst_nat',
+        'natPolicyOrigSvc_':'svc_orig','natPolicyTransSvc_':'svc_nat',
+        'natPolicySrcIface_':'in_iface','natPolicyDstIface_':'out_iface',
+        'natPolicyComment_':'comment',
+        'natPolicyProbePort_':'port','natPolicyProbeType_':'type',
+        'natPolocyNonDeletable':'can_delete','natPolicyEnabled_':'enabled',
+      }
+      self.type = {'0': 'UDP','1': 'TCP' , '-1': 'Unknown'}
+    
+    def parse(self,_key,_value):
+      number = _key.split("_")[len(_key.split("_"))-1]
+      for key, value in self.map.iteritems():
+        if _key.startswith(key):          
+          if value == "enabled": _value = (True if _value == "1" else False)
+        
+          self.setAttribute(number,value,_value)
+          return True          
+      return False
           
 ifs = Interfaces()
 dhcps = DHCPs()
 dhcpstatic = DHCPStatic()
+nats = NATs()
           
 parser = OptionParser()
 parser.add_option("-i", "--infile", dest="file", help="Set the input file")
@@ -169,7 +195,7 @@ for i,v in enumerate(c):
   if ifs.parse(key,value): continue
   if dhcps.parse(key,value): continue
   if dhcpstatic.parse(key,value): continue
-  
+  if nats.parse(key,value): continue
   
 print "\n"
 for i,ob in enumerate(ifs.list()):
@@ -210,3 +236,14 @@ for i,ob in enumerate(dhcpstatic.list()):
   
     print ""
     
+    
+for i,ob in enumerate(nats.list()):
+  if options.dumpapaplus:
+    print ob
+  else:
+    if ob.enabled == False: continue
+  
+    print "nat ifIn '%s' ifOut '%s' src" % (ifs.getById(ob.in_iface).name if (ob.in_iface) else "Any",ifs.getById(ob.out_iface).name),
+    print "'%s' ->" % (ob.src_orig if (ob.src_orig) else "Any"),
+    print "'%s' dst" % (ob.dst_orig if (ob.dst_orig) else "Any"),
+    print ""
