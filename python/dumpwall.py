@@ -82,10 +82,60 @@ class Interfaces(Container):
         
           self.setAttribute(number,value,_value)
           return True
-
+      return False
+          
+class DHCPs(Container):
+    def __init__(self):
+      super(DHCPs, self).__init__()
+      self.map = {
+        'prefs_dhdynstart_':'start','prefs_dhdynend_':'stop','prefs_dhdynrouter_':'gateway','prefs_dhdynsubnetmask_':'netmask',
+        'prefs_dhdynlease_':'leasetime','prefs_dhdyndns0_':'dns1','prefs_dhdyndns1_':'dns2','prefs_dhdyndns2_':'dns3',
+        'prefs_dhdynbootp_':'bootp','prefs_dhdynscopeactive_':'active',
+      }
+    
+    def parse(self,_key,_value):
+      number = _key.split("_")[len(_key.split("_"))-1]
+      for key, value in self.map.iteritems():
+        if _key.startswith(key):
+          if value == 'active':
+            _value = True if (_value == "on") else False 
+          if value.startswith("dns") and _value == "0.0.0.0":
+            continue
         
-ifs = Interfaces()
+          self.setAttribute(number,value,_value)
+          return True          
+      return False
 
+class DHCPStatic(Container):
+    def __init__(self):
+      super(DHCPStatic, self).__init__()
+      self.map = {
+        'prefs_dhstaticname_':'name','prefs_dhstaticip_':'ipaddress','prefs_dhstatichw_':'macaddress',
+        'prefs_dhstaticrouter_':'gateway','prefs_dhstaticsubnetmask_':'netmask',
+        'prefs_dhstaticlease_':'leasetime','prefs_dhstatictype_':'type',
+        'prefs_dhstaticdns0_':'dns1','prefs_dhstaticdns1_':'dns2','prefs_dhstaticdns2_':'dns3',
+      }
+      self.dhstatictype = {'0': 'Physical interface','2': 'Virtual interface' , '-1': 'Unknown'}
+    
+    def parse(self,_key,_value):
+      number = _key.split("_")[len(_key.split("_"))-1]
+      for key, value in self.map.iteritems():
+        if _key.startswith(key):
+          if value.startswith("macaddress"):
+            _value = '-'.join(a+b for a,b in zip(_value[::2], _value[1::2]))
+          
+          if value.startswith("dns") and _value == "0.0.0.0":
+            continue
+        
+          self.setAttribute(number,value,_value)
+          return True          
+      return False
+
+          
+ifs = Interfaces()
+dhcps = DHCPs()
+dhcpstatic = DHCPStatic()
+          
 parser = OptionParser()
 parser.add_option("-i", "--infile", dest="file", help="Set the input file")
 parser.add_option("-d", "--dump", dest="dumpapa", action="store_true", default=False, help="Dump variables as is")
@@ -116,19 +166,47 @@ for i,v in enumerate(c):
   oldpercent = percent
   sys.stdout.flush()
   
-  if ifs.parse(key,value):
-    continue
+  if ifs.parse(key,value): continue
+  if dhcps.parse(key,value): continue
+  if dhcpstatic.parse(key,value): continue
   
-for i,ifn in enumerate(ifs.list()):
-  #print "%-2s | %-15s | %-10s" % (ifn.id,ifn.name,ifn.ipaddress)
+  
+print "\n"
+for i,ob in enumerate(ifs.list()):
+  #print "%-2s | %-15s | %-10s" % (ob.id,ob.name,ob.ipaddress)
   if options.dumpapaplus:
-    print ifn
+    print ob
   else:
-    print "interface id '%s' name '%s' type '%s'" % (ifn.id,ifn.name,ifn.ifacetype),
-    if (int(ifn.vlanid) > 0):
-      print "vlan '%s'" % (ifn.vlanid),
+    print "interface id '%s' name '%s' type '%s'" % (ob.id,ob.name,ob.ifacetype),
+    if (int(ob.vlanid) > 0): print "vlan '%s'" % (ob.vlanid),
     
-    if (int(ifn.portshieldwith) > -1):
-      print "portshield with '%s'" % (ifs.getById(ifn.portshieldwith).name),
+    if (int(ob.portshieldwith) > -1): print "portshield with '%s'" % (ifs.getById(ob.portshieldwith).name),
   
     print ""
+    
+for i,ob in enumerate(dhcps.list()):
+  if options.dumpapaplus:
+    print ob
+  else:
+    if ob.active == False:
+      continue
+    
+    print "dhcp range '%s-%s' netmask '%s' gateway '%s' dns" % (ob.start,ob.stop,ob.netmask,ob.gateway),
+    if (ob.dns1): print "'%s'" % (ob.dns1),
+    if (ob.dns2): print ",'%s'" % (ob.dns2),
+    if (ob.dns3): print ",'%s'" % (ob.dns3),
+  
+    print ""
+
+for i,ob in enumerate(dhcpstatic.list()):
+  if options.dumpapaplus:
+    print ob
+  else:
+    
+    print "dhcp static name '%s' mac-address '%s' ip '%s' netmask '%s' gateway '%s' dns" % (ob.name,ob.macaddress,ob.ipaddress,ob.netmask,ob.gateway),
+    if (ob.dns1): print "'%s'" % (ob.dns1),
+    if (ob.dns2): print ",'%s'" % (ob.dns2),
+    if (ob.dns3): print ",'%s'" % (ob.dns3),
+  
+    print ""
+    
