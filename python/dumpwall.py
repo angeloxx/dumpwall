@@ -19,7 +19,14 @@ class Container(object):
       if d['id'] == int(id):
         return d
     return Dictate({})
-        
+
+  def getByAttribute(self,attribute,value):
+    for i,d in enumerate(self.data):
+      if d[attribute] == value:
+        return d
+    return Dictate({})
+
+      
   def list(self):
     return self.data
 
@@ -67,7 +74,7 @@ class Interfaces(Container):
       self.map = {
         'iface_name_':'name','iface_type_':'type','iface_lan_ip_':'ipaddress','iface_static_ip_':'ipaddress','iface_comment_':'comment',
         'iface_vlan_tag_':'vlanid','iface_static_mask_':'netmask','iface_static_gateway_':'gateway',
-        'iface_phys_type_':'ifacetype', 'iface_portshield_to_': 'portshieldwith'
+        'iface_phys_type_':'ifacetype', 'iface_portshield_to_': 'portshieldwith','iface_ifnum_':'ifnumber'
       }
       self.ifacetype = {'0': 'Physical interface','2': 'Virtual interface' , '-1': 'Unknown'}
     
@@ -83,6 +90,9 @@ class Interfaces(Container):
           self.setAttribute(number,value,_value)
           return True
       return False
+          
+    def getByIfNumber(self,number):
+      return self.getByAttribute('ifnumber',number)
           
 class DHCPs(Container):
     def __init__(self):
@@ -243,7 +253,10 @@ for i,ob in enumerate(nats.list()):
   else:
     if ob.enabled == False: continue
   
-    print "nat ifIn '%s' ifOut '%s' src" % (ifs.getById(ob.in_iface).name if (ob.in_iface) else "Any",ifs.getById(ob.out_iface).name),
-    print "'%s' ->" % (ob.src_orig if (ob.src_orig) else "Any"),
-    print "'%s' dst" % (ob.dst_orig if (ob.dst_orig) else "Any"),
+    print "nat ifIn '%s' ifOut '%s'" % (ifs.getByIfNumber(ob.in_iface).name if (ob.in_iface != "-1") else "Any",ifs.getByIfNumber(ob.out_iface).name if (ob.out_iface != "-1") else "Any"),
+    print "%s" % (ob.in_iface), 
+    print "from '%s'" % (ob.src_orig if (ob.src_orig) else "Any"),
+    print "to '%s'" % (ob.dst_orig if (ob.dst_orig) else "Any"),
+    print "becomes from '%s'" % (ob.src_nat if (ob.src_nat) else "Original"),
+    print "to '%s'" % (ob.dst_nat if (ob.dst_nat) else "Original"),
     print ""
