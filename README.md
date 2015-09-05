@@ -27,7 +27,7 @@ This program is work in progress, I'm planning to switch to Cisco to Sonicwall a
 this utility to create a dump (HTML report and txt) of saved configuration that can be printed
 and compared with diff to obtain differences between versions.
 
-Me (and this software) is not associated, related or sponsored by Sonicwall or Dell. Use it at
+I (and this software) am not associated, related or sponsored by Sonicwall or Dell. Use it at
 your own risk.
 
 ## License
